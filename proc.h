@@ -1,3 +1,6 @@
+#define MAX_PSYC_PAGES 15
+#define MAX_TOTAL_PAGES 30
+
 // Per-CPU state
 struct cpu {
   uchar apicid;                // Local APIC ID
@@ -63,6 +66,9 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  uint num_psyc_pages;
+  uint psyc_pages[MAX_PSYC_PAGES];
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -70,3 +76,5 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
+
+void allocate_proc_page(uint);

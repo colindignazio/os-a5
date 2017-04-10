@@ -250,6 +250,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       kfree(mem);
       return 0;
     }
+    allocate_proc_page(PGROUNDDOWN(a));
   }
   return newsz;
 }

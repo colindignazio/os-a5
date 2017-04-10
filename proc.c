@@ -73,6 +73,8 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
+  p->num_psyc_pages = 0;
+
   return p;
 }
 
@@ -482,4 +484,15 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+void
+allocate_proc_page(uint a) {
+  if(proc->num_psyc_pages >= MAX_PSYC_PAGES) {
+    //swap stuff here
+  } else {
+    proc->psyc_pages[proc->num_psyc_pages] = a;
+    proc->num_psyc_pages++;
+  }
+  //cprintf("psyc_pages=%d\npp[0]=%d\n",proc->num_psyc_pages,proc->psyc_pages[proc->num_psyc_pages-1]);
 }
