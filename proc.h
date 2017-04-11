@@ -1,5 +1,6 @@
 #define MAX_PSYC_PAGES 15
 #define MAX_TOTAL_PAGES 30
+#define MAX_EXTERN_PAGES (MAX_TOTAL_PAGES - MAX_PSYC_PAGES)
 
 // Per-CPU state
 struct cpu {
@@ -69,6 +70,8 @@ struct proc {
 
   uint num_psyc_pages;
   uint psyc_pages[MAX_PSYC_PAGES];
+  uint num_extern_pages;
+  uint extern_pages[MAX_EXTERN_PAGES];
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -77,4 +80,4 @@ struct proc {
 //   fixed-size stack
 //   expandable heap
 
-void allocate_proc_page(uint);
+int allocate_proc_page(uint);

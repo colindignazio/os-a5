@@ -1,0 +1,1 @@
+int open_file(char *, int);

@@ -6,6 +6,8 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "sysfile.h"
+#include "fcntl.h"
 
 struct {
   struct spinlock lock;
@@ -494,12 +496,43 @@ procdump(void)
   }
 }
 
-void
+int
+write_to_page_file(uint a)
+{
+  uint fd;
+  struct file *f;
+  char pid[10];
+  char filename[20];
+
+  filename[0] = '\0';
+  itoa(proc->pid, pid, 10);
+  strncat(filename, ".page", 6);
+  strncat(filename, pid, strlen(pid));
+
+  if((fd = open_file(filename, O_CREATE | O_RDWR)) == -1) {
+    panic("page file open failed");
+  }
+  
+  f = proc->ofile[fd];
+  if(filewrite(f, (char*)a, PGSIZE) == -1) {
+    panic("file write failed");
+  } else {
+    //fileclose(f);
+  }
+
+  return 0;
+}
+
+int
 allocate_proc_page(uint a) {
   if(proc->num_psyc_pages >= MAX_PSYC_PAGES) {
-    //swap stuff here
+    write_to_page_file(a);
+    proc->extern_pages[proc->num_extern_pages] = a;
+    proc->num_extern_pages++;
   } else {
     proc->psyc_pages[proc->num_psyc_pages] = a;
     proc->num_psyc_pages++;
   }
+
+  return 0;
 }
