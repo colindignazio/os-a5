@@ -36,6 +36,7 @@ allocproc(void)
 {
   struct proc *p;
   char *sp;
+  int i;
 
   acquire(&ptable.lock);
 
@@ -74,6 +75,9 @@ found:
   p->context->eip = (uint)forkret;
 
   p->num_psyc_pages = 0;
+  for(i = 0; i < MAX_PSYC_PAGES; i++) {
+    p->psyc_pages[i] = 0;
+  }
 
   return p;
 }
@@ -133,6 +137,10 @@ growproc(int n)
   }
   proc->sz = sz;
   switchuvm(proc);
+
+  cprintf("pid: %d\n", proc->pid);
+  cprintf("PDX: %x PTX: %x\n", PDX(proc->psyc_pages[proc->num_psyc_pages-1]), PTX(proc->psyc_pages[proc->num_psyc_pages-1]));
+  cprintf("psyc_pages=%d\npp[0]=%x\n\n",proc->num_psyc_pages,proc->psyc_pages[proc->num_psyc_pages-1]);
   return 0;
 }
 
@@ -494,5 +502,4 @@ allocate_proc_page(uint a) {
     proc->psyc_pages[proc->num_psyc_pages] = a;
     proc->num_psyc_pages++;
   }
-  //cprintf("psyc_pages=%d\npp[0]=%d\n",proc->num_psyc_pages,proc->psyc_pages[proc->num_psyc_pages-1]);
 }

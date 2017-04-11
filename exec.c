@@ -36,6 +36,11 @@ exec(char *path, char **argv)
   if((pgdir = setupkvm()) == 0)
     goto bad;
 
+  proc->num_psyc_pages = 0;
+  for(i = 0; i < MAX_PSYC_PAGES; i++) {
+    proc->psyc_pages[i] = 0;
+  }
+
   // Load program into memory.
   sz = 0;
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
