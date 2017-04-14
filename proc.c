@@ -170,11 +170,17 @@ growproc(int n)
       return -1;
   }
   proc->sz = sz;
-  switchuvm(proc);
+/*
+  if(proc->pid > 2) {
+    cprintf("pid: %d\n", proc->pid);
+    cprintf("pname: %s\n", proc->name);
 
-  cprintf("pid: %d\n", proc->pid);
-  cprintf("PDX: %x PTX: %x\n", PDX(proc->psyc_pages[proc->num_psyc_pages-1].a), PTX(proc->psyc_pages[proc->num_psyc_pages-1].a));
-  cprintf("psyc_pages=%d\npp[0]=%x\n\n",proc->num_psyc_pages,proc->psyc_pages[proc->num_psyc_pages-1].a);
+    for(i = 0; i < proc->num_psyc_pages; i++) {
+      cprintf("PDX: %x PTX: %x\n", PDX(proc->psyc_pages[i].a), PTX(proc->psyc_pages[i].a));
+      cprintf("psyc_pages=%d\npp[%d]=%x\n\n",proc->num_psyc_pages,i,proc->psyc_pages[i].a);
+    }
+  }*/
+  switchuvm(proc);
   return 0;
 }
 
@@ -545,6 +551,23 @@ write_to_page_file(uint a, uint offset)
   return 0;
 }
 
+int
+read_from_page_file(uint a, uint offset)
+{
+  struct file *f;
+
+  f = proc->extern_file;
+
+  filesetoffset(f, offset);
+
+  if(fileread(f, (char*)a, PGSIZE) == -1) {
+    panic("file read failed");
+    return -1;
+  }
+
+  return 0;
+}
+
 void updatePageAge() {
   struct proc *p;
   int i;
@@ -576,21 +599,4 @@ void updatePageAge() {
     }
   }
   release(&ptable.lock);
-}
-
-int
-read_from_page_file(uint a, uint offset)
-{
-  struct file *f;
-
-  f = proc->extern_file;
-
-  filesetoffset(f, offset);
-
-  if(fileread(f, (char*)a, PGSIZE) == -1) {
-    panic("file read failed");
-    return -1;
-  }
-
-  return 0;
 }
