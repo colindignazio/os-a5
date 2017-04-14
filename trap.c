@@ -36,6 +36,9 @@ idtinit(void)
 void
 trap(struct trapframe *tf)
 {
+  uint addr;
+  pde_t* vaddr;
+
   if(tf->trapno == T_SYSCALL){
     if(proc->killed)
       exit();

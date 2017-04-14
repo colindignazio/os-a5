@@ -427,7 +427,7 @@ void writePageToDisk(char* addr, uint offset) {
 }
 
 void swapPages(uint addr) {
-  if(strncmp(proc->name, "init") == 0 || strncmp(proc->name, "sh") == 0) {
+  if(proc->pid == 0 || proc->pid == 1) {
     return;
   }
 
