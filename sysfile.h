@@ -1,1 +1,1 @@
-int open_file(char *, int);
+struct file* open_file(char *, int);

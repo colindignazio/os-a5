@@ -29,21 +29,23 @@ pinit(void)
 }
 
 void
-create_extern_page_file() {
-  uint fd;
+create_extern_page_file(struct proc *p) {
+  //uint fd;
   char pid[10];
   char filename[20];
+  struct file *f;
+
 
   filename[0] = '\0';
-  itoa(proc->pid, pid, 10);
+  itoa(p->pid, pid, 10);
   strncat(filename, ".page", 6);
   strncat(filename, pid, strlen(pid));
 
-  if((fd = open_file(filename, O_CREATE | O_RDWR)) == -1) {
+  if((f = open_file(filename, O_CREATE | O_RDWR)) == (struct file*)-1) {
     panic("page file open failed");
   }
 
-  proc->extern_file = proc->ofile[fd];
+  p->extern_file = f;
 }
 
 //PAGEBREAK: 32
@@ -94,21 +96,22 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
-  proc->num_psyc_pages = 0;
-  for(i = 0; i < MAX_PSYC_PAGES; i++) {
-    proc->psyc_pages[i].a = 0;
-    proc->psyc_pages[i].intime = 0;
-    proc->psyc_pages[i].age = 0;
-  }
+  if(p->pid > 2) {
+    proc->num_psyc_pages = 0;
+    for(i = 0; i < MAX_PSYC_PAGES; i++) {
+      proc->psyc_pages[i].a = 0;
+      proc->psyc_pages[i].intime = 0;
+      proc->psyc_pages[i].age = 0;
+    }
 
-  proc->num_extern_pages = 0;
-  for(i = 0; i < MAX_PSYC_PAGES; i++) {
-    proc->extern_pages[i].a = 0;
-    proc->extern_pages[i].foffset = 0;
-    proc->extern_pages[i].age = 0;
+    proc->num_extern_pages = 0;
+    for(i = 0; i < MAX_PSYC_PAGES; i++) {
+      proc->extern_pages[i].a = 0;
+      proc->extern_pages[i].foffset = 0;
+      proc->extern_pages[i].age = 0;
+    }
+    create_extern_page_file(p);
   }
-
-  create_extern_page_file();
 
   return p;
 }

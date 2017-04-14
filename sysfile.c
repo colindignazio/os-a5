@@ -284,7 +284,7 @@ create(char *path, short type, short major, short minor)
 }
 
 // Copied from sys_open.
-int
+struct file*
 open_file(char *path, int omode)
 {
   int fd;
@@ -297,18 +297,18 @@ open_file(char *path, int omode)
     ip = create(path, T_FILE, 0, 0);
     if(ip == 0){
       end_op();
-      return -1;
+      return (struct file*)-1;
     }
   } else {
     if((ip = namei(path)) == 0){
       end_op();
-      return -1;
+      return (struct file*)-1;
     }
     ilock(ip);
     if(ip->type == T_DIR && omode != O_RDONLY){
       iunlockput(ip);
       end_op();
-      return -1;
+      return (struct file*)-1;
     }
   }
 
@@ -317,7 +317,7 @@ open_file(char *path, int omode)
       fileclose(f);
     iunlockput(ip);
     end_op();
-    return -1;
+    return (struct file*)-1;
   }
   iunlock(ip);
   end_op();
@@ -327,7 +327,8 @@ open_file(char *path, int omode)
   f->off = 0;
   f->readable = !(omode & O_WRONLY);
   f->writable = (omode & O_WRONLY) || (omode & O_RDWR);
-  return fd;
+  //return fd;
+  return f;
 }
 
 int
