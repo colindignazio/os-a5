@@ -7,6 +7,8 @@
 #include "proc.h"
 #include "elf.h"
 
+void writePageToDisk(char*, uint);
+
 extern char data[];  // defined by kernel.ld
 pde_t *kpgdir;  // for use in scheduler()
 
@@ -229,6 +231,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 {
   char *mem;
   uint a;
+  extern_page *page;
 
   if(newsz >= KERNBASE)
     return 0;
@@ -250,7 +253,17 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       kfree(mem);
       return 0;
     }
-    allocate_proc_page(PGROUNDDOWN(a));
+
+    if(proc->num_psyc_pages >= MAX_PSYC_PAGES) {
+      page = &proc->extern_pages[proc->num_extern_pages];
+      page->a = PGROUNDDOWN(a);
+      page->foffset = proc->num_extern_pages * PGSIZE;
+      writePageToDisk((char *)page->a, page->foffset);
+      proc->num_extern_pages++;
+    } else {
+      proc->psyc_pages[proc->num_psyc_pages] = a;
+      proc->num_psyc_pages++;
+    }
   }
   return newsz;
 }
