@@ -89,3 +89,4 @@ struct proc {
 //   expandable heap
 
 int allocate_proc_page(uint);
+int write_to_page_file(uint, uint);

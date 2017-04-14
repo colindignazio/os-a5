@@ -497,7 +497,7 @@ procdump(void)
 }
 
 int
-write_to_page_file(uint a)
+write_to_page_file(uint a, uint offset)
 {
   uint fd;
   struct file *f;
@@ -526,7 +526,7 @@ write_to_page_file(uint a)
 int
 allocate_proc_page(uint a) {
   if(proc->num_psyc_pages >= MAX_PSYC_PAGES) {
-    write_to_page_file(a);
+    write_to_page_file(a, 0);
     proc->extern_pages[proc->num_extern_pages].a = a;
     proc->num_extern_pages++;
   } else {
