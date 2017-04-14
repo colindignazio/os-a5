@@ -108,6 +108,8 @@ found:
     proc->extern_pages[i].age = 0;
   }
 
+  create_extern_page_file();
+
   return p;
 }
 
