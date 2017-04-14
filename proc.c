@@ -527,7 +527,7 @@ int
 allocate_proc_page(uint a) {
   if(proc->num_psyc_pages >= MAX_PSYC_PAGES) {
     write_to_page_file(a);
-    proc->extern_pages[proc->num_extern_pages] = a;
+    proc->extern_pages[proc->num_extern_pages].a = a;
     proc->num_extern_pages++;
   } else {
     proc->psyc_pages[proc->num_psyc_pages] = a;

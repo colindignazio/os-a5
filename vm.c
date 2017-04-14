@@ -390,8 +390,9 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
-void writePageToDisk(uint va, uint offset) {
-   if ((num = writeToSwapFile(PTE_ADDR(va), offset * PGSIZE, PGSIZE)) == 0)
+void writePageToDisk(char* addr, uint offset) {
+  char* va = (char*)addr;
+   if ((write_to_page_file(PTE_ADDR(va), offset)) == 0)
     return;
   pte_t *pte1 = walkpgdir(proc->pgdir, (void*)va, 0);
   if (!*pte1)
@@ -400,7 +401,7 @@ void writePageToDisk(uint va, uint offset) {
   kfree((char*)PTE_ADDR(P2V_WO(*walkpgdir(proc->pgdir, va, 0))));
   *pte1 = PTE_W | PTE_U | PTE_PG;
   proc->num_extern_pages++;
-  lcr3(v2p(proc->pgdir));
+  lcr3(V2P(proc->pgdir));
   return;
 }
 
