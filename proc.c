@@ -28,6 +28,24 @@ pinit(void)
   initlock(&ptable.lock, "ptable");
 }
 
+void
+create_extern_page_file() {
+  uint fd;
+  char pid[10];
+  char filename[20];
+
+  filename[0] = '\0';
+  itoa(proc->pid, pid, 10);
+  strncat(filename, ".page", 6);
+  strncat(filename, pid, strlen(pid));
+
+  if((fd = open_file(filename, O_CREATE | O_RDWR)) == -1) {
+    panic("page file open failed");
+  }
+
+  proc->extern_file = proc->ofile[fd];
+}
+
 //PAGEBREAK: 32
 // Look in the process table for an UNUSED proc.
 // If found, change state to EMBRYO and initialize
@@ -80,6 +98,9 @@ found:
   for(i = 0; i < MAX_PSYC_PAGES; i++) {
     p->psyc_pages[i] = 0;
   }
+
+  p->num_extern_pages = 0;
+  //create_extern_page_file();
 
   return p;
 }
@@ -499,39 +520,15 @@ procdump(void)
 int
 write_to_page_file(uint a, uint offset)
 {
-  uint fd;
   struct file *f;
-  char pid[10];
-  char filename[20];
 
-  filename[0] = '\0';
-  itoa(proc->pid, pid, 10);
-  strncat(filename, ".page", 6);
-  strncat(filename, pid, strlen(pid));
+  f = proc->extern_file;
 
-  if((fd = open_file(filename, O_CREATE | O_RDWR)) == -1) {
-    panic("page file open failed");
-  }
-  
-  f = proc->ofile[fd];
+  filesetoffset(f, offset);
+
   if(filewrite(f, (char*)a, PGSIZE) == -1) {
     panic("file write failed");
-  } else {
-    //fileclose(f);
-  }
-
-  return 0;
-}
-
-int
-allocate_proc_page(uint a) {
-  if(proc->num_psyc_pages >= MAX_PSYC_PAGES) {
-    write_to_page_file(a, 0);
-    proc->extern_pages[proc->num_extern_pages].a = a;
-    proc->num_extern_pages++;
-  } else {
-    proc->psyc_pages[proc->num_psyc_pages] = a;
-    proc->num_psyc_pages++;
+    return -1;
   }
 
   return 0;

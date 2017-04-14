@@ -155,3 +155,7 @@ filewrite(struct file *f, char *addr, int n)
   panic("filewrite");
 }
 
+void
+filesetoffset(struct file *f, uint offset) {
+  f->off = offset;
+}
