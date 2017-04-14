@@ -77,6 +77,15 @@ trap(struct trapframe *tf)
             cpunum(), tf->cs, tf->eip);
     lapiceoi();
     break;
+  case T_PGFLT:
+    addr = rcr2();
+    vaddr = &proc->pgdir[PDX(addr)];
+    if (((int)(*vaddr) & PTE_P) != 0) {
+      if (((uint*)PTE_ADDR(P2V(*vaddr)))[PTX(addr)] & PTE_PG) { 
+        swapPages(PTE_ADDR(addr));
+      }
+    }
+    break;
 
   //PAGEBREAK: 13
   default:

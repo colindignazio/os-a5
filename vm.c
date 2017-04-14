@@ -390,6 +390,14 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+void fifoSwap(uint addr) {
+
+}
+
+void nfuSwap(uint addr) {
+
+}
+
 void writePageToDisk(char* addr, uint offset) {
   char* va = (char*)addr;
    if ((write_to_page_file(PTE_ADDR(va), offset)) == 0)
@@ -403,6 +411,22 @@ void writePageToDisk(char* addr, uint offset) {
   proc->num_extern_pages++;
   lcr3(V2P(proc->pgdir));
   return;
+}
+
+void swapPages(uint addr) {
+  if(strncmp(proc->name, "init") == 0 || strncmp(proc->name, "sh") == 0) {
+    return;
+  }
+
+#ifdef FIFO
+  fifoSwap(addr);
+#elif defined(NFU)
+  nfuSwap(addr);
+#else
+
+#endif
+
+  lcr3(V2P(proc->pgdir));
 }
 
 //PAGEBREAK!
