@@ -96,3 +96,4 @@ struct proc {
 
 int write_to_page_file(uint, uint);
 void updatePageAge();
+int read_from_page_file(uint, uint);
