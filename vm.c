@@ -409,6 +409,28 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
 }
 
 void fifoSwap(uint addr) {
+  int i;
+  int foundIndex = 0;
+  int lowestTime = proc->psyc_pages[0].intime;
+  pte_t *pte1, *pte2;
+
+  for(i = 1; i < proc->num_psyc_pages-1; i++) {
+    if(proc->psyc_pages[i].intime < lowestTime) {
+      foundIndex = i;
+      lowestTime = proc->psyc_pages[i].intime;
+    }
+  }
+
+  pte1 = walkpgdir(proc->pgdir, (void*)proc->psyc_pages[foundIndex].a, 0);
+  if(!*pte1) {
+    panic("Swapfile empty");
+  }
+
+  for (i = 0; i < MAX_PSYC_PAGES; i++)
+    if (proc->extern_pages[i].a == PTE_ADDR(addr))
+      goto foundswappedslot;
+
+foundswappedslot:
 
 }
 
