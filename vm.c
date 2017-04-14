@@ -390,6 +390,20 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+void writePageToDisk(uint va, uint offset) {
+   if ((num = writeToSwapFile(PTE_ADDR(va), offset * PGSIZE, PGSIZE)) == 0)
+    return;
+  pte_t *pte1 = walkpgdir(proc->pgdir, (void*)va, 0);
+  if (!*pte1)
+    panic("writePageToSwapFile: pte1 is empty");
+
+  kfree((char*)PTE_ADDR(P2V_WO(*walkpgdir(proc->pgdir, va, 0))));
+  *pte1 = PTE_W | PTE_U | PTE_PG;
+  proc->num_extern_pages++;
+  lcr3(v2p(proc->pgdir));
+  return;
+}
+
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!
