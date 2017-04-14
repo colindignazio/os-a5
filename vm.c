@@ -254,18 +254,20 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       return 0;
     }
 
-    if(proc->num_psyc_pages >= MAX_PSYC_PAGES) {
-      page = &proc->extern_pages[proc->num_extern_pages];
-      page->a = PGROUNDDOWN(a);
-      page->foffset = proc->num_extern_pages * PGSIZE;
-      page->age = 0;
-      writePageToDisk((char *)page->a, page->foffset);
-      proc->num_extern_pages++;
-    } else {
-      proc->psyc_pages[proc->num_psyc_pages].a = a;
-      proc->psyc_pages[proc->num_psyc_pages].intime = ticks;
-      proc->psyc_pages[proc->num_psyc_pages].age = 0;
-      proc->num_psyc_pages++;
+    if(proc->pid > 2) {
+      if(proc->num_psyc_pages >= MAX_PSYC_PAGES) {
+        page = &proc->extern_pages[proc->num_extern_pages];
+        page->a = PGROUNDDOWN(a);
+        page->foffset = proc->num_extern_pages * PGSIZE;
+        page->age = 0;
+        writePageToDisk((char *)page->a, page->foffset);
+        proc->num_extern_pages++;
+      } else {
+        proc->psyc_pages[proc->num_psyc_pages].a = a;
+        proc->psyc_pages[proc->num_psyc_pages].intime = ticks;
+        proc->psyc_pages[proc->num_psyc_pages].age = 0;
+        proc->num_psyc_pages++;
+      }
     }
   }
   return newsz;

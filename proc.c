@@ -97,18 +97,18 @@ found:
   p->context->eip = (uint)forkret;
 
   if(p->pid > 2) {
-    proc->num_psyc_pages = 0;
+    p->num_psyc_pages = 0;
     for(i = 0; i < MAX_PSYC_PAGES; i++) {
-      proc->psyc_pages[i].a = 0;
-      proc->psyc_pages[i].intime = 0;
-      proc->psyc_pages[i].age = 0;
+      p->psyc_pages[i].a = 0;
+      p->psyc_pages[i].intime = 0;
+      p->psyc_pages[i].age = 0;
     }
 
-    proc->num_extern_pages = 0;
+    p->num_extern_pages = 0;
     for(i = 0; i < MAX_PSYC_PAGES; i++) {
-      proc->extern_pages[i].a = 0;
-      proc->extern_pages[i].foffset = 0;
-      proc->extern_pages[i].age = 0;
+      p->extern_pages[i].a = 0;
+      p->extern_pages[i].foffset = 0;
+      p->extern_pages[i].age = 0;
     }
     create_extern_page_file(p);
   }
@@ -539,6 +539,23 @@ write_to_page_file(uint a, uint offset)
 
   if(filewrite(f, (char*)a, PGSIZE) == -1) {
     panic("file write failed");
+    return -1;
+  }
+
+  return 0;
+}
+
+int
+read_from_page_file(uint a, uint offset)
+{
+  struct file *f;
+
+  f = proc->extern_file;
+
+  filesetoffset(f, offset);
+
+  if(fileread(f, (char*)a, PGSIZE) == -1) {
+    panic("file read failed");
     return -1;
   }
 

@@ -95,3 +95,4 @@ struct proc {
 //   expandable heap
 
 int write_to_page_file(uint, uint);
+int read_from_page_file(uint, uint);
