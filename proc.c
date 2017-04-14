@@ -544,3 +544,36 @@ write_to_page_file(uint a, uint offset)
 
   return 0;
 }
+
+void updatePageAge() {
+  struct proc *p;
+  int i;
+  pte_t *pte, *pde, *pgtab;
+
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if((p->state == RUNNING || p->state == RUNNABLE || p->state == SLEEPING) && (p->pid > 2)){
+      for (i = 0; i < MAX_PSYC_PAGES; i++){
+        if (p->psyc_pages[i].a == 0)
+          continue;
+
+         p->psyc_pages[i].age++;
+         p->extern_pages[i].age++;
+
+        //only dealing with pages in RAM
+        //might mean we have to check access bit b4 moving a page to disk so we don't miss a tick
+        pde = &p->pgdir[PDX(p->psyc_pages[i].a)];
+        if(*pde & PTE_P){
+          pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
+          pte = &pgtab[PTX(p->psyc_pages[i].a)];
+        }
+        else pte = 0;
+        if(pte)
+          if(*pte & PTE_A){
+            p->psyc_pages[i].age = 0;
+          }
+      }
+    }
+  }
+  release(&ptable.lock);
+}

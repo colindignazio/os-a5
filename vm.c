@@ -254,6 +254,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       return 0;
     }
 
+    if(proc->pid > 2) {
     if(proc->num_psyc_pages >= MAX_PSYC_PAGES) {
       page = &proc->extern_pages[proc->num_extern_pages];
       page->a = PGROUNDDOWN(a);
@@ -266,6 +267,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       proc->psyc_pages[proc->num_psyc_pages].intime = ticks;
       proc->psyc_pages[proc->num_psyc_pages].age = 0;
       proc->num_psyc_pages++;
+    }
     }
   }
   return newsz;
@@ -416,7 +418,7 @@ void nfuSwap(uint addr) {
 
 void writePageToDisk(char* addr, uint offset) {
   char* va = (char*)addr;
-   if ((write_to_page_file(PTE_ADDR(va), offset)) == 0)
+   if ((write_to_page_file(PTE_ADDR(va), offset)) != 0)
     return;
   pte_t *pte1 = walkpgdir(proc->pgdir, (void*)va, 0);
   if (!*pte1)

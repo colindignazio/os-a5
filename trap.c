@@ -53,6 +53,9 @@ trap(struct trapframe *tf)
   case T_IRQ0 + IRQ_TIMER:
     if(cpunum() == 0){
       acquire(&tickslock);
+
+      updatePageAge();
+
       ticks++;
       wakeup(&ticks);
       release(&tickslock);
