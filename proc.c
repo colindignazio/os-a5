@@ -94,13 +94,19 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
-  p->num_psyc_pages = 0;
+  proc->num_psyc_pages = 0;
   for(i = 0; i < MAX_PSYC_PAGES; i++) {
-    p->psyc_pages[i] = 0;
+    proc->psyc_pages[i].a = 0;
+    proc->psyc_pages[i].intime = 0;
+    proc->psyc_pages[i].age = 0;
   }
 
-  p->num_extern_pages = 0;
-  //create_extern_page_file();
+  proc->num_extern_pages = 0;
+  for(i = 0; i < MAX_PSYC_PAGES; i++) {
+    proc->extern_pages[i].a = 0;
+    proc->extern_pages[i].foffset = 0;
+    proc->extern_pages[i].age = 0;
+  }
 
   return p;
 }
@@ -162,8 +168,8 @@ growproc(int n)
   switchuvm(proc);
 
   cprintf("pid: %d\n", proc->pid);
-  cprintf("PDX: %x PTX: %x\n", PDX(proc->psyc_pages[proc->num_psyc_pages-1]), PTX(proc->psyc_pages[proc->num_psyc_pages-1]));
-  cprintf("psyc_pages=%d\npp[0]=%x\n\n",proc->num_psyc_pages,proc->psyc_pages[proc->num_psyc_pages-1]);
+  cprintf("PDX: %x PTX: %x\n", PDX(proc->psyc_pages[proc->num_psyc_pages-1].a), PTX(proc->psyc_pages[proc->num_psyc_pages-1].a));
+  cprintf("psyc_pages=%d\npp[0]=%x\n\n",proc->num_psyc_pages,proc->psyc_pages[proc->num_psyc_pages-1].a);
   return 0;
 }
 

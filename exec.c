@@ -38,7 +38,16 @@ exec(char *path, char **argv)
 
   proc->num_psyc_pages = 0;
   for(i = 0; i < MAX_PSYC_PAGES; i++) {
-    proc->psyc_pages[i] = 0;
+    proc->psyc_pages[i].a = 0;
+    proc->psyc_pages[i].intime = 0;
+    proc->psyc_pages[i].age = 0;
+  }
+
+  proc->num_extern_pages = 0;
+  for(i = 0; i < MAX_PSYC_PAGES; i++) {
+    proc->extern_pages[i].a = 0;
+    proc->extern_pages[i].foffset = 0;
+    proc->extern_pages[i].age = 0;
   }
 
   // Load program into memory.

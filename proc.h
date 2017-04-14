@@ -53,6 +53,12 @@ struct context {
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 typedef struct {
+  int a;
+  int intime;
+  int age;
+} psyc_page;
+
+typedef struct {
   uint foffset;
   int a;
   int age;
@@ -77,7 +83,7 @@ struct proc {
   struct file *extern_file;
 
   uint num_psyc_pages;
-  uint psyc_pages[MAX_PSYC_PAGES];
+  psyc_page psyc_pages[MAX_PSYC_PAGES];
   uint num_extern_pages;
   extern_page extern_pages[MAX_EXTERN_PAGES];
 };
