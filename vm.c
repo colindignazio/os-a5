@@ -256,6 +256,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       return 0;
     }
 
+#ifndef NONE
     if(proc->pid > 2) {
       if(proc->num_psyc_pages >= MAX_PSYC_PAGES) {
         page = &proc->extern_pages[proc->num_extern_pages];
@@ -265,7 +266,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
         writePageToDisk((char*)page->a, page->foffset);
         proc->num_extern_pages++;
         proc->total_extern_pages++;
-        fifoSwap(PGROUNDDOWN(a));
+        swapPages(PGROUNDDOWN(a));
       } else {
         proc->psyc_pages[proc->num_psyc_pages].a = a;
         proc->psyc_pages[proc->num_psyc_pages].intime = ticks;
@@ -274,6 +275,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       }
     }
   }
+#endif
   return newsz;
 }
 

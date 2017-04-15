@@ -54,8 +54,9 @@ trap(struct trapframe *tf)
     if(cpunum() == 0){
       acquire(&tickslock);
 
+#ifdef NFU
       updatePageAge();
-
+#endif
       ticks++;
       wakeup(&ticks);
       release(&tickslock);
