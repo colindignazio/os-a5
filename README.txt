@@ -15,7 +15,7 @@ To test A5, build then run:
 
 Files added:
 myMemTest.c  - Tests our algorithms and prints out the number of ticks they took to complete
-sysfile.h    - header for open_file function
+sysfile.h    - header for open_file function and isdirempty function
 
 Files modified:
 proc.h    - Added members to keep track of proc pages
@@ -32,6 +32,19 @@ sysfile.c - Added open_file function to open files from the kernel
 
 vm.c      - Logic for page selection algorithms
           - Keep track of proc pages as they are allocated, deallocated and swapped
+
+defs.h    - Added function prototypes for some functions
+
+exec.c    - Reseting values to track proc pages
+
+file.c    - Adding filesetoffset function
+          - Added unlink function to free external page file
+
+file.h    - Added a function prototype
+
+mmu.h     - Added PTE_PG flag
+
+string.c  - Added itoa, inplace_reverse and strncat functions
 
 
 Description:
