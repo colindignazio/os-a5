@@ -654,12 +654,9 @@ void updatePageAge() {
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if((p->state == RUNNING || p->state == RUNNABLE || p->state == SLEEPING) && (p->pid > 2)){
-      for (i = 0; i < MAX_PSYC_PAGES; i++){
-        if (p->psyc_pages[i].a == 0)
-          continue;
+      for (i = 0; i < p->num_psyc_pages; i++){
 
          p->psyc_pages[i].age++;
-         p->extern_pages[i].age++;
 
         //only dealing with pages in RAM
         //might mean we have to check access bit b4 moving a page to disk so we don't miss a tick
@@ -672,7 +669,11 @@ void updatePageAge() {
         if(pte)
           if(*pte & PTE_A){
             p->psyc_pages[i].age = 0;
+            (*pte) &= ~PTE_A;
           }
+      }
+      for (i = 0; i < p->num_extern_pages; i++){
+         p->extern_pages[i].age++;
       }
     }
   }

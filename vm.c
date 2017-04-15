@@ -266,7 +266,6 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
         writePageToDisk((char*)page->a, page->foffset);
         proc->num_extern_pages++;
         proc->total_extern_pages++;
-        swapPages(PGROUNDDOWN(a));
       } else {
         proc->psyc_pages[proc->num_psyc_pages].a = a;
         proc->psyc_pages[proc->num_psyc_pages].intime = ticks;
@@ -503,6 +502,7 @@ void nfuSwap(uint addr) {
   }
 
   pte1 = walkpgdir(proc->pgdir, (void*)proc->psyc_pages[psysIndex].a, 0);
+
   pte2 = walkpgdir(proc->pgdir, (void*)addr, 0);
   *pte2 = PTE_ADDR(*pte1) | PTE_U | PTE_W | PTE_P;
 
