@@ -443,7 +443,33 @@ void fifoSwap(uint addr) {
 }
 
 void nfuSwap(uint addr) {
+  int externIndex = getIndexForExternPage(addr);
+  int psysIndex = 0;
+  uint a = addr;
+  int i;
+  int highestTime = proc->psyc_pages[0].age;
 
+  if(externIndex == -1) {
+    panic("Couldn't find extern file");
+  }
+
+  for(i = 0; i < proc->num_psyc_pages; i++) {
+    if(proc->psyc_pages[i].age > highestTime) {
+      psysIndex = i;
+      highestTime = proc->psyc_pages[i].age;
+    }
+  }
+
+  cprintf("Reading in %x from external page slot %d into psys slot %d\n", proc->extern_pages[externIndex].a, externIndex, psysIndex);
+  readPageFromDisk((char *)proc->extern_pages[externIndex].a, proc->extern_pages[externIndex].foffset);
+  cprintf("Writing out %x from psys page slot %d into external slot slot %d\n", proc->psyc_pages[psysIndex].a, psysIndex, externIndex);
+  writePageToDisk((char*)proc->psyc_pages[psysIndex].a, proc->extern_pages[externIndex].foffset);
+
+  a = proc->extern_pages[externIndex].a;
+  proc->extern_pages[externIndex].a = proc->psyc_pages[psysIndex].a;
+  proc->psyc_pages[psysIndex].a = a;
+  proc->psyc_pages[psysIndex].intime = ticks;
+  proc->psyc_pages[psysIndex].age = 0;
 }
 
 void writePageToDisk(char* addr, uint offset) {
@@ -496,7 +522,6 @@ void swapPages(uint addr) {
 #elif defined(NFU)
   nfuSwap(addr);
 #else
-  fifoSwap(addr);
 
 #endif
 
