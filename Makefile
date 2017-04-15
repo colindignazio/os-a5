@@ -174,6 +174,8 @@ UPROGS=\
 	_ln\
 	_ls\
 	_mkdir\
+	_myMemTest\
+	_myMemTest2\
 	_rm\
 	_sanity\
 	_sh\
@@ -181,7 +183,6 @@ UPROGS=\
 	_usertests\
 	_wc\
 	_zombie\
-	_myMemTest\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
