@@ -2,6 +2,9 @@
 #define MAX_TOTAL_PAGES 30
 #define MAX_EXTERN_PAGES (MAX_TOTAL_PAGES - MAX_PSYC_PAGES)
 
+//Assuming that init and sh use pids 1 and 2 respectively
+#define SHELL_PID 2
+
 // Per-CPU state
 struct cpu {
   uchar apicid;                // Local APIC ID
@@ -86,6 +89,8 @@ struct proc {
   psyc_page psyc_pages[MAX_PSYC_PAGES];
   uint num_extern_pages;
   extern_page extern_pages[MAX_EXTERN_PAGES];
+
+  // Total number of extern pages created. Used to keep track of current offset for writing
   uint total_extern_pages;
 };
 

@@ -32,12 +32,11 @@ pinit(void)
 }
 
 void
-create_extern_page_file(struct proc *p) {
-  //uint fd;
+create_extern_page_file(struct proc *p) 
+{
   char pid[10];
   char filename[20];
   struct file *f;
-
 
   filename[0] = '\0';
   itoa(p->pid, pid, 10);
@@ -51,11 +50,11 @@ create_extern_page_file(struct proc *p) {
   p->extern_file = f;
 }
 
-int remove_external_page_file(struct proc *p) {
-  //path of proccess
+int
+remove_external_page_file(struct proc *p) 
+{
   char pid[10];
   char filename[20];
-
 
   filename[0] = '\0';
   itoa(p->pid, pid, 10);
@@ -116,7 +115,7 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
 
-  if(p->pid > 2) {
+  if(p->pid > SHELL_PID) {
     p->num_psyc_pages = 0;
     for(i = 0; i < MAX_PSYC_PAGES; i++) {
       p->psyc_pages[i].a = 0;
@@ -191,16 +190,6 @@ growproc(int n)
       return -1;
   }
   proc->sz = sz;
-/*
-  if(proc->pid > 2) {
-    cprintf("pid: %d\n", proc->pid);
-    cprintf("pname: %s\n", proc->name);
-
-    for(i = 0; i < proc->num_psyc_pages; i++) {
-      cprintf("PDX: %x PTX: %x\n", PDX(proc->psyc_pages[i].a), PTX(proc->psyc_pages[i].a));
-      cprintf("psyc_pages=%d\npp[%d]=%x\n\n",proc->num_psyc_pages,i,proc->psyc_pages[i].a);
-    }
-  }*/
   switchuvm(proc);
   return 0;
 }
@@ -251,7 +240,8 @@ fork(void)
   np->parent = proc;
   *np->tf = *proc->tf;
 
-  if(proc->pid > 2) {
+  if(proc->pid > SHELL_PID) {
+    // Copy page tables of old proc into new proc
     np->num_psyc_pages = proc->num_psyc_pages;
     for(i = 0; i < proc->num_psyc_pages; i++) {
       np->psyc_pages[i] = proc->psyc_pages[i];
@@ -263,7 +253,6 @@ fork(void)
     }
 
     np->total_extern_pages = proc->total_extern_pages;
-
     copy_extern_file(np, proc);
   }
 
@@ -650,6 +639,7 @@ void updateProcPagesAges(struct proc *p) {
   pte_t *pte, *pde, *pgtab;
   int i;
 
+  // Update the age of each page for this proc
   for(i = 0; i < p->num_psyc_pages; i++) {
     p->psyc_pages[i].age++;
 

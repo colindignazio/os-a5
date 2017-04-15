@@ -175,9 +175,7 @@ UPROGS=\
 	_ls\
 	_mkdir\
 	_myMemTest\
-	_myMemTest2\
 	_rm\
-	_sanity\
 	_sh\
 	_stressfs\
 	_usertests\
@@ -224,7 +222,7 @@ endif
 QEMUOPTS = -drive file=fs.img,index=1,media=disk,format=raw -drive file=xv6.img,index=0,media=disk,format=raw -smp $(CPUS) -m 512 $(QEMUEXTRA)
 
 ifndef SELECTION
-SELECTION := DEFAULT
+SELECTION := NFU
 endif
 
 qemu: fs.img xv6.img

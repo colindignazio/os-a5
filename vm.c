@@ -233,7 +233,10 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 {
   char *mem;
   uint a;
+
+#ifndef NONE
   extern_page *page;
+#endif
 
   if(newsz >= KERNBASE)
     return 0;
@@ -257,8 +260,9 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     }
 
 #ifndef NONE
-    if(proc->pid > 2) {
+    if(proc->pid > SHELL_PID) {
       if(proc->num_psyc_pages >= MAX_PSYC_PAGES) {
+        // If we don't have room allocate an external page
         page = &proc->extern_pages[proc->num_extern_pages];
         page->a = PGROUNDDOWN(a);
         page->foffset = proc->total_extern_pages * PGSIZE;
@@ -267,14 +271,15 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
         proc->num_extern_pages++;
         proc->total_extern_pages++;
       } else {
+        // If we have room allocate a physical page
         proc->psyc_pages[proc->num_psyc_pages].a = a;
         proc->psyc_pages[proc->num_psyc_pages].intime = ticks;
         proc->psyc_pages[proc->num_psyc_pages].age = 0;
         proc->num_psyc_pages++;
       }
     }
-  }
 #endif
+  }
   return newsz;
 }
 
@@ -448,7 +453,7 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
 
 void fifoSwap(uint addr) {
   int externIndex = getIndexForExternPage(addr);
-  int psysIndex = 0;
+  int psycIndex = 0;
   uint a = addr;
   int i;
   int lowestTime = proc->psyc_pages[0].intime;
@@ -460,31 +465,31 @@ void fifoSwap(uint addr) {
 
   for(i = 0; i < proc->num_psyc_pages; i++) {
     if(proc->psyc_pages[i].intime < lowestTime) {
-      psysIndex = i;
+      psycIndex = i;
       lowestTime = proc->psyc_pages[i].intime;
     }
   }
 
-  pte1 = walkpgdir(proc->pgdir, (void*)proc->psyc_pages[psysIndex].a, 0);
+  pte1 = walkpgdir(proc->pgdir, (void*)proc->psyc_pages[psycIndex].a, 0);
   pte2 = walkpgdir(proc->pgdir, (void*)addr, 0);
   *pte2 = PTE_ADDR(*pte1) | PTE_U | PTE_W | PTE_P;
 
-  cprintf("Reading in %x from external page slot %d into psys slot %d\n", proc->extern_pages[externIndex].a, externIndex, psysIndex);
+  //cprintf("Reading in %x from external page slot %d into psyc slot %d\n", proc->extern_pages[externIndex].a, externIndex, psycIndex);
   readPageFromDisk((char *)proc->extern_pages[externIndex].a, proc->extern_pages[externIndex].foffset);
-  cprintf("Writing out %x from psys page slot %d into external slot slot %d\n", proc->psyc_pages[psysIndex].a, psysIndex, externIndex);
-  writePageToDisk((char*)proc->psyc_pages[psysIndex].a, proc->extern_pages[externIndex].foffset);
+  //cprintf("Writing out %x from psyc page slot %d into external slot slot %d\n", proc->psyc_pages[psycIndex].a, psycIndex, externIndex);
+  writePageToDisk((char*)proc->psyc_pages[psycIndex].a, proc->extern_pages[externIndex].foffset);
 
   *pte1 = PTE_U | PTE_W | PTE_PG;
 
   a = proc->extern_pages[externIndex].a;
-  proc->extern_pages[externIndex].a = proc->psyc_pages[psysIndex].a;
-  proc->psyc_pages[psysIndex].a = a;
-  proc->psyc_pages[psysIndex].intime = ticks;
+  proc->extern_pages[externIndex].a = proc->psyc_pages[psycIndex].a;
+  proc->psyc_pages[psycIndex].a = a;
+  proc->psyc_pages[psycIndex].intime = ticks;
 }
 
 void nfuSwap(uint addr) {
   int externIndex = getIndexForExternPage(addr);
-  int psysIndex = 0;
+  int psycIndex = 0;
   uint a = addr;
   int i;
   int highestTime = proc->psyc_pages[0].age;
@@ -496,39 +501,39 @@ void nfuSwap(uint addr) {
 
   for(i = 0; i < proc->num_psyc_pages; i++) {
     if(proc->psyc_pages[i].age > highestTime) {
-      psysIndex = i;
+      psycIndex = i;
       highestTime = proc->psyc_pages[i].age;
     }
   }
 
-  pte1 = walkpgdir(proc->pgdir, (void*)proc->psyc_pages[psysIndex].a, 0);
-
+  pte1 = walkpgdir(proc->pgdir, (void*)proc->psyc_pages[psycIndex].a, 0);
   pte2 = walkpgdir(proc->pgdir, (void*)addr, 0);
   *pte2 = PTE_ADDR(*pte1) | PTE_U | PTE_W | PTE_P;
 
-  cprintf("Reading in %x from external page slot %d into psys slot %d\n", proc->extern_pages[externIndex].a, externIndex, psysIndex);
+  //cprintf("Reading in %x from external page slot %d into psyc slot %d\n", proc->extern_pages[externIndex].a, externIndex, psycIndex);
   readPageFromDisk((char *)proc->extern_pages[externIndex].a, proc->extern_pages[externIndex].foffset);
-  cprintf("Writing out %x from psys page slot %d into external slot slot %d\n", proc->psyc_pages[psysIndex].a, psysIndex, externIndex);
-  writePageToDisk((char*)proc->psyc_pages[psysIndex].a, proc->extern_pages[externIndex].foffset);
+  //cprintf("Writing out %x from psyc page slot %d into external slot slot %d\n", proc->psyc_pages[psycIndex].a, psycIndex, externIndex);
+  writePageToDisk((char*)proc->psyc_pages[psycIndex].a, proc->extern_pages[externIndex].foffset);
 
   *pte1 = PTE_U | PTE_W | PTE_PG;
 
   a = proc->extern_pages[externIndex].a;
-  proc->extern_pages[externIndex].a = proc->psyc_pages[psysIndex].a;
-  proc->psyc_pages[psysIndex].a = a;
-  proc->psyc_pages[psysIndex].intime = ticks;
+  proc->extern_pages[externIndex].a = proc->psyc_pages[psycIndex].a;
+  proc->psyc_pages[psycIndex].a = a;
+  proc->psyc_pages[psycIndex].intime = ticks;
 }
 
 void writePageToDisk(char* addr, uint offset) {
-  char* va = addr;
   pte_t *pte;
 
   pte = walkpgdir(proc->pgdir, (void *)addr, 0);
-  if (!*pte)
-    panic("writePageToSwapFile: pte is empty");
+  if(*pte == 0) {
+    panic("Couldn't load pte");
+  }
 
-  if ((write_to_page_file(PTE_ADDR(va), offset)) != 0)
-    panic("couldnt write file");
+  if((write_to_page_file(PTE_ADDR(addr), offset)) != 0) {
+    panic("Couldn't write file");
+  }
 
   kfree(P2V(PTE_ADDR(*pte)));
 
@@ -542,16 +547,17 @@ void readPageFromDisk(char* addr, uint offset) {
   pte_t *pte;
 
   if((newPage = kalloc()) == 0) {
-    panic("Couldn't allocate new page.");
+    panic("Couldn't allocate new page");
   }
 
   if(read_from_page_file((uint)newPage, offset) != 0) {
-    panic("couldnt read file");
+    panic("Couldn't read file");
   }
 
   pte = walkpgdir(proc->pgdir, (void *)addr, 0);
-  if (!*pte)
-    panic("writePageToSwapFile: pte is empty");
+  if(*pte == 0) {
+    panic("Couldn't load pte");
+  }
 
   *pte &= 0xFFF;
   *pte |= V2P(newPage);
@@ -560,16 +566,14 @@ void readPageFromDisk(char* addr, uint offset) {
 }
 
 void swapPages(uint addr) {
-  if(proc->pid <= 2) {
+  if(proc->pid <= SHELL_PID) {
     return;
   }
 
 #ifdef FIFO
   fifoSwap(addr);
-#elif defined(NFU)
+#elif NFU
   nfuSwap(addr);
-#else
-
 #endif
 
   lcr3(V2P(proc->pgdir));
