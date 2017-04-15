@@ -86,6 +86,7 @@ struct proc {
   psyc_page psyc_pages[MAX_PSYC_PAGES];
   uint num_extern_pages;
   extern_page extern_pages[MAX_EXTERN_PAGES];
+  uint total_extern_pages;
 };
 
 // Process memory is laid out contiguously, low addresses first:
@@ -97,3 +98,4 @@ struct proc {
 int write_to_page_file(uint, uint);
 void updatePageAge();
 int read_from_page_file(uint, uint);
+int getIndexForExternPage(uint a);

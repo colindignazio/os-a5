@@ -8,6 +8,8 @@
 #include "elf.h"
 
 void writePageToDisk(char*, uint);
+void readPageFromDisk(char* addr, uint offset);
+void fifoSwap(uint addr);
 
 extern char data[];  // defined by kernel.ld
 pde_t *kpgdir;  // for use in scheduler()
@@ -258,10 +260,12 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       if(proc->num_psyc_pages >= MAX_PSYC_PAGES) {
         page = &proc->extern_pages[proc->num_extern_pages];
         page->a = PGROUNDDOWN(a);
-        page->foffset = proc->num_extern_pages * PGSIZE;
+        page->foffset = proc->total_extern_pages * PGSIZE;
         page->age = 0;
-        writePageToDisk((char *)page->a, page->foffset);
+        writePageToDisk((char*)page->a, page->foffset);
         proc->num_extern_pages++;
+        proc->total_extern_pages++;
+        fifoSwap(PGROUNDDOWN(a));
       } else {
         proc->psyc_pages[proc->num_psyc_pages].a = a;
         proc->psyc_pages[proc->num_psyc_pages].intime = ticks;
@@ -409,29 +413,37 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
 }
 
 void fifoSwap(uint addr) {
+  int externIndex = getIndexForExternPage(addr);
+  int psysIndex = 0;
+  uint a = addr;
   int i;
-  int foundIndex = 0;
   int lowestTime = proc->psyc_pages[0].intime;
-  pte_t *pte1, *pte2;
 
-  for(i = 1; i < proc->num_psyc_pages-1; i++) {
+  // new extern page
+  if(externIndex == -1) {
+   // externIndex = proc->num_extern_pages;
+    panic("wrong");
+  }
+
+  for(i = 0; i < proc->num_psyc_pages; i++) {
     if(proc->psyc_pages[i].intime < lowestTime) {
-      foundIndex = i;
+      psysIndex = i;
       lowestTime = proc->psyc_pages[i].intime;
     }
   }
 
-  pte1 = walkpgdir(proc->pgdir, (void*)proc->psyc_pages[foundIndex].a, 0);
-  if(!*pte1) {
-    panic("Swapfile empty");
-  }
+  //if(externIndex < proc->num_extern_pages) {
+    cprintf("Reading in %x from external page slot %d into psys slot %d\n", proc->extern_pages[externIndex].a, externIndex, psysIndex);
+    readPageFromDisk((char *)proc->extern_pages[externIndex].a, proc->extern_pages[externIndex].foffset);
+  //}
+  cprintf("Writing out %x from psys page slot %d into external slot slot %d\n", proc->psyc_pages[psysIndex].a, psysIndex, externIndex);
+  writePageToDisk((char*)proc->psyc_pages[psysIndex].a, proc->extern_pages[externIndex].foffset);
 
-  for (i = 0; i < MAX_PSYC_PAGES; i++)
-    if (proc->extern_pages[i].a == PTE_ADDR(addr))
-      goto foundswappedslot;
-
-foundswappedslot:
-
+    a = proc->extern_pages[externIndex].a;
+  proc->extern_pages[externIndex].a = proc->psyc_pages[psysIndex].a;
+  proc->psyc_pages[psysIndex].a = a;
+  proc->psyc_pages[psysIndex].intime = ticks;
+  proc->psyc_pages[psysIndex].age = 0;
 }
 
 void nfuSwap(uint addr) {
@@ -439,18 +451,44 @@ void nfuSwap(uint addr) {
 }
 
 void writePageToDisk(char* addr, uint offset) {
-  char* va = (char*)addr;
-   if ((write_to_page_file(PTE_ADDR(va), offset)) != 0)
-    return;
-  pte_t *pte1 = walkpgdir(proc->pgdir, (void*)va, 0);
-  if (!*pte1)
-    panic("writePageToSwapFile: pte1 is empty");
+  char* va = addr;
+  pte_t *pte;
 
-  kfree((char*)PTE_ADDR(P2V_WO(*walkpgdir(proc->pgdir, va, 0))));
-  *pte1 = PTE_W | PTE_U | PTE_PG;
-  proc->num_extern_pages++;
-  lcr3(V2P(proc->pgdir));
+  pte = walkpgdir(proc->pgdir, (void *)addr, 0);
+  if (!*pte)
+    panic("writePageToSwapFile: pte is empty");
+
+   if ((write_to_page_file(PTE_ADDR(va), offset)) != 0)
+    panic("couldnt write file");
+
+  kfree(P2V(PTE_ADDR(*pte)));
+
+    *pte &= ~PTE_P;
+*pte |= PTE_PG;
   return;
+}
+
+void readPageFromDisk(char* addr, uint offset) {
+  char *newPage;
+  pte_t *pte;
+
+  if((newPage = kalloc()) == 0) {
+    panic("Couldn't allocate new page.");
+  }
+
+  if(read_from_page_file((uint)newPage, offset) != 0) {
+    panic("couldnt read file");
+  }
+
+  pte = walkpgdir(proc->pgdir, (void *)addr, 0);
+  if (!*pte)
+    panic("writePageToSwapFile: pte is empty");
+
+  *pte &= 0xFFF;
+  *pte |= V2P(newPage);
+  *pte &= (~PTE_PG);
+  *pte |= PTE_P;
+  cprintf("PTE: %x\n", *pte);
 }
 
 void swapPages(uint addr) {
@@ -463,6 +501,7 @@ void swapPages(uint addr) {
 #elif defined(NFU)
   nfuSwap(addr);
 #else
+  fifoSwap(addr);
 
 #endif
 

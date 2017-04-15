@@ -110,6 +110,7 @@ found:
       p->extern_pages[i].foffset = 0;
       p->extern_pages[i].age = 0;
     }
+    p->total_extern_pages = 0;
     create_extern_page_file(p);
   }
 
@@ -549,6 +550,18 @@ write_to_page_file(uint a, uint offset)
   }
 
   return 0;
+}
+
+int getIndexForExternPage(uint a) {
+  int i;
+
+  for(i = 0; i < proc->num_extern_pages; i++) {
+    if(proc->extern_pages[i].a == a) {
+      return i;
+    }
+  }
+
+  return -1;
 }
 
 int

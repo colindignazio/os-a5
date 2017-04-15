@@ -49,6 +49,7 @@ exec(char *path, char **argv)
     proc->extern_pages[i].foffset = 0;
     proc->extern_pages[i].age = 0;
   }
+  proc->total_extern_pages = 0;
 
   // Load program into memory.
   sz = 0;

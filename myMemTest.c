@@ -9,7 +9,7 @@
 int
 main(int argc, char *argv[]){
 
-	#if FIFO
+	//#if FIFO
 
 	int i, j;
 	char *arr[14];
@@ -81,7 +81,7 @@ main(int argc, char *argv[]){
 		printf(1, "Deallocated all extra pages.\nPress any key to exit the father code.\n");
 		gets(input, 10);
 	}
-
+#ifdef FIFO
 #elif SCFIFO
 	int i, j;
 	char *arr[14];
