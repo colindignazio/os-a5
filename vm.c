@@ -419,10 +419,8 @@ void fifoSwap(uint addr) {
   int i;
   int lowestTime = proc->psyc_pages[0].intime;
 
-  // new extern page
   if(externIndex == -1) {
-   // externIndex = proc->num_extern_pages;
-    panic("wrong");
+    panic("Couldn't find extern file");
   }
 
   for(i = 0; i < proc->num_psyc_pages; i++) {
@@ -432,14 +430,12 @@ void fifoSwap(uint addr) {
     }
   }
 
-  //if(externIndex < proc->num_extern_pages) {
-    cprintf("Reading in %x from external page slot %d into psys slot %d\n", proc->extern_pages[externIndex].a, externIndex, psysIndex);
-    readPageFromDisk((char *)proc->extern_pages[externIndex].a, proc->extern_pages[externIndex].foffset);
-  //}
+  cprintf("Reading in %x from external page slot %d into psys slot %d\n", proc->extern_pages[externIndex].a, externIndex, psysIndex);
+  readPageFromDisk((char *)proc->extern_pages[externIndex].a, proc->extern_pages[externIndex].foffset);
   cprintf("Writing out %x from psys page slot %d into external slot slot %d\n", proc->psyc_pages[psysIndex].a, psysIndex, externIndex);
   writePageToDisk((char*)proc->psyc_pages[psysIndex].a, proc->extern_pages[externIndex].foffset);
 
-    a = proc->extern_pages[externIndex].a;
+  a = proc->extern_pages[externIndex].a;
   proc->extern_pages[externIndex].a = proc->psyc_pages[psysIndex].a;
   proc->psyc_pages[psysIndex].a = a;
   proc->psyc_pages[psysIndex].intime = ticks;
@@ -458,13 +454,13 @@ void writePageToDisk(char* addr, uint offset) {
   if (!*pte)
     panic("writePageToSwapFile: pte is empty");
 
-   if ((write_to_page_file(PTE_ADDR(va), offset)) != 0)
+  if ((write_to_page_file(PTE_ADDR(va), offset)) != 0)
     panic("couldnt write file");
 
   kfree(P2V(PTE_ADDR(*pte)));
 
-    *pte &= ~PTE_P;
-*pte |= PTE_PG;
+  *pte &= ~PTE_P;
+  *pte |= PTE_PG;
   return;
 }
 
@@ -488,7 +484,6 @@ void readPageFromDisk(char* addr, uint offset) {
   *pte |= V2P(newPage);
   *pte &= (~PTE_PG);
   *pte |= PTE_P;
-  cprintf("PTE: %x\n", *pte);
 }
 
 void swapPages(uint addr) {
