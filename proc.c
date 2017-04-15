@@ -646,35 +646,41 @@ read_from_page_file(uint a, uint offset)
   return 0;
 }
 
+void updateProcPagesAges(struct proc *p) {
+  pte_t *pte, *pde, *pgtab;
+  int i;
+
+  for(i = 0; i < p->num_psyc_pages; i++) {
+    p->psyc_pages[i].age++;
+
+    pde = &p->pgdir[PDX(p->psyc_pages[i].a)];
+    if(*pde & PTE_P) {
+      pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
+      pte = &pgtab[PTX(p->psyc_pages[i].a)];
+
+      if(pte != 0 && *pte & PTE_A) {
+        p->psyc_pages[i].age = 0;
+        (*pte) &= ~PTE_A;
+      }
+    }
+  }
+  for(i = 0; i < p->num_extern_pages; i++) {
+    p->extern_pages[i].age++;
+  }
+}
+
 void updatePageAge() {
   struct proc *p;
-  int i;
-  pte_t *pte, *pde, *pgtab;
 
+  // Loop through all processes
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if((p->state == RUNNING || p->state == RUNNABLE || p->state == SLEEPING) && (p->pid > 2)){
-      for (i = 0; i < p->num_psyc_pages; i++){
+    if(p->pid <= 2) {
+      continue;
+    }
 
-         p->psyc_pages[i].age++;
-
-        //only dealing with pages in RAM
-        //might mean we have to check access bit b4 moving a page to disk so we don't miss a tick
-        pde = &p->pgdir[PDX(p->psyc_pages[i].a)];
-        if(*pde & PTE_P){
-          pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
-          pte = &pgtab[PTX(p->psyc_pages[i].a)];
-        }
-        else pte = 0;
-        if(pte)
-          if(*pte & PTE_A){
-            p->psyc_pages[i].age = 0;
-            (*pte) &= ~PTE_A;
-          }
-      }
-      for (i = 0; i < p->num_extern_pages; i++){
-         p->extern_pages[i].age++;
-      }
+    if(p->state == RUNNING || p->state == RUNNABLE || p->state == SLEEPING) {
+      updateProcPagesAges(p);
     }
   }
   release(&ptable.lock);

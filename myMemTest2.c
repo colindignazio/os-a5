@@ -23,10 +23,29 @@ int main(int argc, char *argv[]) {
 
   // Next pages to be allocated will cause page faults creating external pages and forcing the process
   // to start swapping our physical pages.
-  for(i = MAX_PSYC_PAGES; i < MAX_TOTAL_PAGES; i++) {
+  for(i = MAX_PSYC_PAGES; i < MAX_PSYC_PAGES + 5; i++) {
     pages[i] = sbrk(PGSIZE);
-    memset(pages[i], '*', PGSIZE);  // Set the values to something so our page files have something in them when we start swapping.
+    memset(pages[i], '*', PGSIZE);
     printf(1, "pages[%d] = %x\n", i, pages[i]);
+  }
+
+  // Allocate some memory in a forked process to ensure the page tables are being copied properly
+  if(fork() == 0) {
+    for(i = MAX_PSYC_PAGES + 5; i < MAX_PSYC_PAGES + 10; i++) {
+      pages[i] = sbrk(PGSIZE);
+      memset(pages[i], '*', PGSIZE);
+      printf(1, "pages[%d] = %x\n", i, pages[i]);
+    }
+    exit();
+  } else {
+    wait();
+
+    // Finish things off by allocating pages until we hit the maximum
+    for(i = MAX_PSYC_PAGES + 10; i < MAX_TOTAL_PAGES; i++) {
+      pages[i] = sbrk(PGSIZE);
+      memset(pages[i], '*', PGSIZE);  // Set the values to something so our page files have something in them when we start swapping.
+      printf(1, "pages[%d] = %x\n", i, pages[i]);
+    }
   }
 
   // For FIFO, we expect to see physical pages getting swapped in the order that they were created starting at slot 0.
