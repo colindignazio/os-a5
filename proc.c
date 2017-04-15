@@ -185,6 +185,27 @@ growproc(int n)
   return 0;
 }
 
+void copy_extern_file(struct proc *dest, struct proc *src) {
+  int i;
+  char buffer[PGSIZE];
+  struct file *fdest, *fsrc;
+
+  fdest = dest->extern_file;
+  fsrc = src->extern_file;
+
+  for(i = 0; i < src->total_extern_pages; i++) {
+    filesetoffset(fsrc, i * PGSIZE);
+    if(fileread(fsrc, buffer, PGSIZE) == -1) {
+      panic("file read failed");
+    }
+
+    filesetoffset(fdest, i * PGSIZE);
+    if(filewrite(fdest, buffer, PGSIZE) == -1) {
+      panic("file write failed");
+    }
+  }
+}
+
 // Create a new process copying p as the parent.
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
@@ -209,6 +230,22 @@ fork(void)
   np->sz = proc->sz;
   np->parent = proc;
   *np->tf = *proc->tf;
+
+  if(proc->pid > 2) {
+    np->num_psyc_pages = proc->num_psyc_pages;
+    for(i = 0; i < proc->num_psyc_pages; i++) {
+      np->psyc_pages[i] = proc->psyc_pages[i];
+    }
+
+    np->num_extern_pages = proc->num_extern_pages;
+    for(i = 0; i < proc->num_extern_pages; i++) {
+      np->extern_pages[i] = proc->extern_pages[i];
+    }
+
+    np->total_extern_pages = proc->total_extern_pages;
+
+    copy_extern_file(np, proc);
+  }
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
