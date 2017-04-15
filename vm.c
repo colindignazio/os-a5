@@ -418,6 +418,7 @@ void fifoSwap(uint addr) {
   uint a = addr;
   int i;
   int lowestTime = proc->psyc_pages[0].intime;
+  pte_t *pte1, *pte2;
 
   if(externIndex == -1) {
     panic("Couldn't find extern file");
@@ -430,16 +431,21 @@ void fifoSwap(uint addr) {
     }
   }
 
+  pte1 = walkpgdir(proc->pgdir, (void*)proc->psyc_pages[psysIndex].a, 0);
+  pte2 = walkpgdir(proc->pgdir, (void*)addr, 0);
+  *pte2 = PTE_ADDR(*pte1) | PTE_U | PTE_W | PTE_P;
+
   cprintf("Reading in %x from external page slot %d into psys slot %d\n", proc->extern_pages[externIndex].a, externIndex, psysIndex);
   readPageFromDisk((char *)proc->extern_pages[externIndex].a, proc->extern_pages[externIndex].foffset);
   cprintf("Writing out %x from psys page slot %d into external slot slot %d\n", proc->psyc_pages[psysIndex].a, psysIndex, externIndex);
   writePageToDisk((char*)proc->psyc_pages[psysIndex].a, proc->extern_pages[externIndex].foffset);
 
+  *pte1 = PTE_U | PTE_W | PTE_PG;
+
   a = proc->extern_pages[externIndex].a;
   proc->extern_pages[externIndex].a = proc->psyc_pages[psysIndex].a;
   proc->psyc_pages[psysIndex].a = a;
   proc->psyc_pages[psysIndex].intime = ticks;
-  proc->psyc_pages[psysIndex].age = 0;
 }
 
 void nfuSwap(uint addr) {
@@ -448,6 +454,7 @@ void nfuSwap(uint addr) {
   uint a = addr;
   int i;
   int highestTime = proc->psyc_pages[0].age;
+  pte_t *pte1, *pte2;
 
   if(externIndex == -1) {
     panic("Couldn't find extern file");
@@ -460,16 +467,21 @@ void nfuSwap(uint addr) {
     }
   }
 
+  pte1 = walkpgdir(proc->pgdir, (void*)proc->psyc_pages[psysIndex].a, 0);
+  pte2 = walkpgdir(proc->pgdir, (void*)addr, 0);
+  *pte2 = PTE_ADDR(*pte1) | PTE_U | PTE_W | PTE_P;
+
   cprintf("Reading in %x from external page slot %d into psys slot %d\n", proc->extern_pages[externIndex].a, externIndex, psysIndex);
   readPageFromDisk((char *)proc->extern_pages[externIndex].a, proc->extern_pages[externIndex].foffset);
   cprintf("Writing out %x from psys page slot %d into external slot slot %d\n", proc->psyc_pages[psysIndex].a, psysIndex, externIndex);
   writePageToDisk((char*)proc->psyc_pages[psysIndex].a, proc->extern_pages[externIndex].foffset);
 
+  *pte1 = PTE_U | PTE_W | PTE_PG;
+
   a = proc->extern_pages[externIndex].a;
   proc->extern_pages[externIndex].a = proc->psyc_pages[psysIndex].a;
   proc->psyc_pages[psysIndex].a = a;
   proc->psyc_pages[psysIndex].intime = ticks;
-  proc->psyc_pages[psysIndex].age = 0;
 }
 
 void writePageToDisk(char* addr, uint offset) {
