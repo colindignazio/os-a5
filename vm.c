@@ -288,6 +288,7 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 {
   pte_t *pte;
   uint a, pa;
+  int i, foundIndex;
 
   if(newsz >= oldsz)
     return oldsz;
@@ -301,9 +302,34 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       pa = PTE_ADDR(*pte);
       if(pa == 0)
         panic("kfree");
-      char *v = P2V(pa);
-      kfree(v);
-      *pte = 0;
+      if(proc->pgdir == pgdir) {
+#ifndef NONE
+        for(i = 0; i < MAX_PSYC_PAGES; i++) {
+          if(proc->psyc_pages[i].a == pa) {
+            foundIndex = i;
+          }
+        }
+        proc->psyc_pages[foundIndex].a = 0;
+        proc->psyc_pages[foundIndex].intime = 0;
+        proc->psyc_pages[foundIndex].age = 0;
+        proc->num_psyc_pages--;
+#endif
+
+        char *v = P2V(pa);
+        kfree(v);
+        *pte = 0;
+
+      } else if(*pte & PTE_PG && proc->pgdir == pgdir) {
+        for(i = 0; i < MAX_EXTERN_PAGES; i++) {
+          if(proc->extern_pages[i].a == pa) {
+            foundIndex = i;
+          }
+        }
+        proc->extern_pages[foundIndex].a = 0;
+        proc->extern_pages[foundIndex].foffset = 0;
+        proc->extern_pages[foundIndex].age = 0;
+        proc->num_extern_pages--;
+      }
     }
   }
   return newsz;

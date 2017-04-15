@@ -34,6 +34,7 @@ struct devsw {
 };
 
 extern struct devsw devsw[];
+int unlink(char*);
 
 #define CONSOLE 1
 

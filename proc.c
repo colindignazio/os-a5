@@ -5,9 +5,12 @@
 #include "mmu.h"
 #include "x86.h"
 #include "proc.h"
+#include "fs.h"
 #include "spinlock.h"
+#include "sleeplock.h"
 #include "sysfile.h"
 #include "fcntl.h"
+#include "file.h"
 
 struct {
   struct spinlock lock;
@@ -46,6 +49,23 @@ create_extern_page_file(struct proc *p) {
   }
 
   p->extern_file = f;
+}
+
+int remove_external_page_file(struct proc *p) {
+  //path of proccess
+  char pid[10];
+  char filename[20];
+
+
+  filename[0] = '\0';
+  itoa(p->pid, pid, 10);
+  strncat(filename, ".page", 6);
+  strncat(filename, pid, strlen(pid));
+
+  if(unlink(filename) < 0)
+    return -1;
+
+  return 0;   
 }
 
 //PAGEBREAK: 32
@@ -288,6 +308,11 @@ exit(void)
     }
   }
 
+#ifndef NONE
+  if(remove_external_page_file(proc) != 0)
+    panic("Error deleting swap file");
+#endif
+
   begin_op();
   iput(proc->cwd);
   end_op();
@@ -523,6 +548,9 @@ kill(int pid)
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->pid == pid){
+#ifndef NONE
+      remove_external_page_file(p);
+#endif
       p->killed = 1;
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING)
