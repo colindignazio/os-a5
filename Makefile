@@ -94,8 +94,8 @@ xv6.img: bootblock kernel fs.img
 	dd if=bootblock of=xv6.img conv=notrunc
 	dd if=kernel of=xv6.img seek=1 conv=notrunc 
 
-swap.img: swap.img
-	dd if=/dev/zero of=swap.img count=10000
+swap.img: xv6.img
+	dd if=/dev/zero of=swap.img bs=1M count=128
 
 xv6memfs.img: bootblock kernelmemfs
 	dd if=/dev/zero of=xv6memfs.img count=10000
@@ -188,8 +188,6 @@ UPROGS=\
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
 
-swap.img: mkfs README $(UPROGS)
-	./mkfs swap.img README $(UPROGS)
 -include *.d
 
 clean: 
@@ -211,7 +209,7 @@ print: xv6.pdf
 
 # run in emulators
 
-bochs : fs.img xv6.img swap.img
+bochs : fs.img xv6.img
 	if [ ! -e .bochsrc ]; then ln -s dot-bochsrc .bochsrc; fi
 	bochs -q
 
@@ -230,23 +228,23 @@ ifndef SELECTION
 SELECTION := NFU
 endif
 
-qemu: fs.img xv6.img swap.img
+qemu: fs.img xv6.img
 	$(QEMU) -serial mon:stdio $(QEMUOPTS)
 
 qemu-memfs: xv6memfs.img
 	$(QEMU) -drive file=xv6memfs.img,index=0,media=disk,format=raw -smp $(CPUS) -m 256
 
-qemu-nox: fs.img xv6.img swap.img
+qemu-nox: fs.img xv6.img
 	$(QEMU) -nographic $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
 
-qemu-gdb: fs.img xv6.img swap.img .gdbinit
+qemu-gdb: fs.img xv6.img .gdbinit
 	@echo "*** Now run 'gdb'." 1>&2
 	$(QEMU) -serial mon:stdio $(QEMUOPTS) -S $(QEMUGDB)
 
-qemu-nox-gdb: fs.img xv6.img swap.img .gdbinit
+qemu-nox-gdb: fs.img xv6.img .gdbinit
 	@echo "*** Now run 'gdb'." 1>&2
 	$(QEMU) -nographic $(QEMUOPTS) -S $(QEMUGDB)
 
