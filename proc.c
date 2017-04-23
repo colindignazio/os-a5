@@ -591,7 +591,7 @@ procdump(void)
 
 int
 write_to_page_file(uint a, uint offset)
-{
+{/*
   struct file *f;
 
   f = proc->extern_file;
@@ -601,7 +601,9 @@ write_to_page_file(uint a, uint offset)
   if(filewrite(f, (char*)a, PGSIZE) == -1) {
     panic("file write failed");
     return -1;
-  }
+  }*/
+
+  write_page_to_swap((char *)a, offset);
 
   return 0;
 }
@@ -620,7 +622,7 @@ int getIndexForExternPage(uint a) {
 
 int
 read_from_page_file(uint a, uint offset)
-{
+{/*
   struct file *f;
 
   f = proc->extern_file;
@@ -630,7 +632,9 @@ read_from_page_file(uint a, uint offset)
   if(fileread(f, (char*)a, PGSIZE) == -1) {
     panic("file read failed");
     return -1;
-  }
+  }*/
+
+  read_page_from_swap((char *)a, offset);
 
   return 0;
 }

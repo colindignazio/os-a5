@@ -58,6 +58,8 @@ int             writei(struct inode*, char*, uint, uint);
 void            ideinit(void);
 void            ideintr(void);
 void            iderw(struct buf*);
+void            write_page_to_swap(char *, int);
+void            read_page_from_swap(char *, int);
 
 // ioapic.c
 void            ioapicenable(int irq, int cpu);

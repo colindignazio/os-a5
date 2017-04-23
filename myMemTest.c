@@ -9,7 +9,7 @@
 
 int main(int argc, char *argv[]) {
 #ifdef NFU
-  const char *alg = "NFU";
+//  const char *alg = "NFU";
 #elif FIFO
   const char *alg = "FIFO";
 #elif NONE
@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
 
   char *pages[MAX_TOTAL_PAGES];
   int i;
-  int start_ticks;
+//  int start_ticks;
 
   // 3 pages are required to hold the inital process information at addresses 0x0000, 0x1000 and 0x2000
   // So allocate the remaining 12 allowed physical pages at addresses 0x3000 to 0xe000.
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
   }
 
   wait();
-
+/*
   // ALLOC_TEST
   start_ticks = uptime();
   for(i = MAX_PSYC_PAGES + 10; i < MAX_TOTAL_PAGES; i++) {
@@ -76,6 +76,6 @@ int main(int argc, char *argv[]) {
     printf(1, ".");
   }
   printf(1, "\nAlgorithm: %s took %d ticks to complete the heavy swapping test...\n\n", alg, uptime() - start_ticks);
-
+*/
   exit();
 }
