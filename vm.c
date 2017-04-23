@@ -510,9 +510,9 @@ void nfuSwap(uint addr) {
   pte2 = walkpgdir(proc->pgdir, (void*)addr, 0);
   *pte2 = PTE_ADDR(*pte1) | PTE_U | PTE_W | PTE_P;
 
-  //cprintf("Reading in %x from external page slot %d into psyc slot %d\n", proc->extern_pages[externIndex].a, externIndex, psycIndex);
+  cprintf("Reading in %x from external page slot %d into psyc slot %d\n", proc->extern_pages[externIndex].a, externIndex, psycIndex);
   readPageFromDisk((char *)proc->extern_pages[externIndex].a, proc->extern_pages[externIndex].foffset);
-  //cprintf("Writing out %x from psyc page slot %d into external slot slot %d\n", proc->psyc_pages[psycIndex].a, psycIndex, externIndex);
+  cprintf("Writing out %x from psyc page slot %d into external slot slot %d\n", proc->psyc_pages[psycIndex].a, psycIndex, externIndex);
   writePageToDisk((char*)proc->psyc_pages[psycIndex].a, proc->extern_pages[externIndex].foffset);
 
   *pte1 = PTE_U | PTE_W | PTE_PG;

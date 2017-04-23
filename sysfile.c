@@ -239,6 +239,51 @@ bad:
 }
 
 static struct inode*
+create_swap(char *path, short type, short major, short minor)
+{
+  uint off;
+  struct inode *ip, *dp;
+  char name[DIRSIZ];
+
+  if((dp = nameiparent_swap(path, name)) == 0)
+    return 0;
+  ilock(dp);
+
+  if((ip = dirlookup(dp, name, &off)) != 0){
+    iunlockput(dp);
+    ilock(ip);
+    if(type == T_FILE && ip->type == T_FILE)
+      return ip;
+    iunlockput(ip);
+    return 0;
+  }
+
+  if((ip = ialloc(dp->dev, type)) == 0)
+    panic("create: ialloc");
+
+  ilock(ip);
+  ip->major = major;
+  ip->minor = minor;
+  ip->nlink = 1;
+  iupdate(ip);
+
+  if(type == T_DIR){  // Create . and .. entries.
+    dp->nlink++;  // for ".."
+    iupdate(dp);
+    // No ip->nlink++ for ".": avoid cyclic ref count.
+    if(dirlink(ip, ".", ip->inum) < 0 || dirlink(ip, "..", dp->inum) < 0)
+      panic("create dots");
+  }
+
+  if(dirlink(dp, name, ip->inum) < 0)
+    panic("create: dirlink");
+
+  iunlockput(dp);
+
+  return ip;
+}
+
+static struct inode*
 create(char *path, short type, short major, short minor)
 {
   uint off;
@@ -285,7 +330,7 @@ create(char *path, short type, short major, short minor)
 
 // Copied from sys_open.
 struct file*
-open_file(char *path, int omode)
+open_file_from_swap(char *path, int omode)
 {
   int fd;
   struct file *f;
@@ -294,7 +339,7 @@ open_file(char *path, int omode)
   begin_op();
 
   if(omode & O_CREATE){
-    ip = create(path, T_FILE, 0, 0);
+    ip = create_swap(path, T_FILE, 0, 0);
     if(ip == 0){
       end_op();
       return (struct file*)-1;

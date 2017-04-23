@@ -20,6 +20,9 @@ struct {
 static struct proc *initproc;
 
 int nextpid = 1;
+
+static int swap_init = 0;
+
 extern void forkret(void);
 extern void trapret(void);
 
@@ -38,12 +41,17 @@ create_extern_page_file(struct proc *p)
   char filename[20];
   struct file *f;
 
+  if(!swap_init) {
+    swapnode = namei_swap("/");
+    swap_init = 1;
+  }
+
   filename[0] = '\0';
   itoa(p->pid, pid, 10);
   strncat(filename, ".page", 6);
   strncat(filename, pid, strlen(pid));
 
-  if((f = open_file(filename, O_CREATE | O_RDWR)) == (struct file*)-1) {
+  if((f = open_file_from_swap(filename, O_CREATE | O_RDWR)) == (struct file*)-1) {
     panic("page file open failed");
   }
 
@@ -61,7 +69,7 @@ remove_external_page_file(struct proc *p)
   strncat(filename, ".page", 6);
   strncat(filename, pid, strlen(pid));
 
-  if(unlink(filename) < 0)
+  if(unlink_from_swap(filename) < 0)
     return -1;
 
   return 0;   

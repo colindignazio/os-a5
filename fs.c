@@ -485,7 +485,14 @@ writei(struct inode *ip, char *src, uint off, uint n)
     bp = bread(ip->dev, bmap(ip, off/BSIZE));
     m = min(n - tot, BSIZE - off%BSIZE);
     memmove(bp->data + off%BSIZE, src, m);
-    log_write(bp);
+
+    // We should probably be using the log here
+    if(bp->dev == 2) {
+      bwrite(bp);
+    } else {
+      log_write(bp);
+    }
+
     brelse(bp);
   }
 
@@ -608,6 +615,45 @@ skipelem(char *path, char *name)
 // path element into name, which must have room for DIRSIZ bytes.
 // Must be called inside a transaction since it calls iput().
 static struct inode*
+namex_swap(char *path, int nameiparent, char *name)
+{
+  struct inode *ip, *next;
+
+  if(*path == '/')
+    ip = iget(2, ROOTINO);
+  else
+    ip = idup(swapnode);
+
+  while((path = skipelem(path, name)) != 0){
+    ilock(ip);
+    if(ip->type != T_DIR){
+      iunlockput(ip);
+      return 0;
+    }
+    if(nameiparent && *path == '\0'){
+      // Stop one level early.
+      iunlock(ip);
+      return ip;
+    }
+    if((next = dirlookup(ip, name, 0)) == 0){
+      iunlockput(ip);
+      return 0;
+    }
+    iunlockput(ip);
+    ip = next;
+  }
+  if(nameiparent){
+    iput(ip);
+    return 0;
+  }
+  return ip;
+}
+
+// Look up and return the inode for a path name.
+// If parent != 0, return the inode for the parent and copy the final
+// path element into name, which must have room for DIRSIZ bytes.
+// Must be called inside a transaction since it calls iput().
+static struct inode*
 namex(char *path, int nameiparent, char *name)
 {
   struct inode *ip, *next;
@@ -643,6 +689,13 @@ namex(char *path, int nameiparent, char *name)
 }
 
 struct inode*
+namei_swap(char *path)
+{
+  char name[DIRSIZ];
+  return namex_swap(path, 0, name);
+}
+
+struct inode*
 namei(char *path)
 {
   char name[DIRSIZ];
@@ -654,3 +707,10 @@ nameiparent(char *path, char *name)
 {
   return namex(path, 1, name);
 }
+
+struct inode*
+nameiparent_swap(char *path, char *name)
+{
+  return namex_swap(path, 1, name);
+}
+

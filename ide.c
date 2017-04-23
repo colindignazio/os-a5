@@ -24,6 +24,13 @@
 #define IDE_CMD_RDMUL 0xc4
 #define IDE_CMD_WRMUL 0xc5
 
+#define FS_DEV 1
+#define FS_BASE 0x1f0
+#define FS_BASE2 0x3f0
+#define SWAP_DEV 2
+#define SWAP_BASE 0x170
+#define SWAP_BASE2 0x370
+
 // idequeue points to the buf now being read/written to the disk.
 // idequeue->qnext points to the next buf to be processed.
 // You must hold idelock while manipulating queue.
@@ -32,15 +39,16 @@ static struct spinlock idelock;
 static struct buf *idequeue;
 
 static int havedisk1;
+static int havedisk2;
 static void idestart(struct buf*);
 
 // Wait for IDE disk to become ready.
 static int
-idewait(int checkerr)
+idewait(int checkerr, int base)
 {
   int r;
 
-  while(((r = inb(0x1f7)) & (IDE_BSY|IDE_DRDY)) != IDE_DRDY)
+  while((r = inb(base + 7)) & (IDE_BSY))
     ;
   if(checkerr && (r & (IDE_DF|IDE_ERR)) != 0)
     return -1;
@@ -55,13 +63,24 @@ ideinit(void)
   initlock(&idelock, "ide");
   picenable(IRQ_IDE);
   ioapicenable(IRQ_IDE, ncpu - 1);
-  idewait(0);
+  idewait(0, FS_BASE);
 
   // Check if disk 1 is present
-  outb(0x1f6, 0xe0 | (1<<4));
+  outb(0x1f6, 0xe0 | ((FS_DEV&1)<<4));
   for(i=0; i<1000; i++){
     if(inb(0x1f7) != 0){
       havedisk1 = 1;
+      break;
+    }
+  }
+
+  idewait(0, SWAP_BASE);
+
+  // Check if disk 1 is present
+  outb(SWAP_BASE + 6, 0xe0 | ((SWAP_DEV&1)<<4));
+  for(i=0; i<1000; i++){
+    if(inb(SWAP_BASE + 7) != 0){
+      havedisk2 = 1;
       break;
     }
   }
@@ -74,6 +93,17 @@ ideinit(void)
 static void
 idestart(struct buf *b)
 {
+  int base;
+  int base2;
+
+  if(b->dev == 1) {
+    base = FS_BASE;
+    base2 = FS_BASE2;
+  } else if(b->dev == 2) {
+    base = SWAP_BASE;
+    base2 = SWAP_BASE2;
+  }
+
   if(b == 0)
     panic("idestart");
   if(b->blockno >= FSSIZE)
@@ -85,18 +115,18 @@ idestart(struct buf *b)
 
   if (sector_per_block > 7) panic("idestart");
 
-  idewait(0);
-  outb(0x3f6, 0);  // generate interrupt
-  outb(0x1f2, sector_per_block);  // number of sectors
-  outb(0x1f3, sector & 0xff);
-  outb(0x1f4, (sector >> 8) & 0xff);
-  outb(0x1f5, (sector >> 16) & 0xff);
-  outb(0x1f6, 0xe0 | ((b->dev&1)<<4) | ((sector>>24)&0x0f));
+  idewait(0, base);
+  outb(base2 + 6, 0);  // generate interrupt
+  outb(base + 2, sector_per_block);  // number of sectors
+  outb(base + 3, sector & 0xff);
+  outb(base + 4, (sector >> 8) & 0xff);
+  outb(base + 5, (sector >> 16) & 0xff);
+  outb(base + 6, 0xe0 | ((b->dev&1)<<4) | ((sector>>24)&0x0f));
   if(b->flags & B_DIRTY){
-    outb(0x1f7, write_cmd);
-    outsl(0x1f0, b->data, BSIZE/4);
+    outb(base + 7, write_cmd);
+    outsl(base, b->data, BSIZE/4);
   } else {
-    outb(0x1f7, read_cmd);
+    outb(base + 7, read_cmd);
   }
 }
 
@@ -116,7 +146,7 @@ ideintr(void)
   idequeue = b->qnext;
 
   // Read data if needed.
-  if(!(b->flags & B_DIRTY) && idewait(1) >= 0)
+  if(!(b->flags & B_DIRTY) && idewait(1, FS_BASE) >= 0)
     insl(0x1f0, b->data, BSIZE/4);
 
   // Wake process waiting for this buf.
@@ -129,6 +159,20 @@ ideintr(void)
     idestart(idequeue);
 
   release(&idelock);
+}
+
+// For whatever reason the interupt wouldn't work with the swap disk
+// Might have something to do with logging. Crudely calling it directly for now.
+void
+ideintr2(struct buf *b)
+{
+  // Read data if needed.
+  if(!(b->flags & B_DIRTY) && idewait(1, SWAP_BASE) >= 0)
+    insl(SWAP_BASE, b->data, BSIZE/4);
+
+  // Wake process waiting for this buf.
+  b->flags |= B_VALID;
+  b->flags &= ~B_DIRTY;
 }
 
 //PAGEBREAK!
@@ -144,10 +188,20 @@ iderw(struct buf *b)
     panic("iderw: buf not locked");
   if((b->flags & (B_VALID|B_DIRTY)) == B_VALID)
     panic("iderw: nothing to do");
-  if(b->dev != 0 && !havedisk1)
+  if(b->dev == 1 && !havedisk1)
     panic("iderw: ide disk 1 not present");
+  if(b->dev == 2 && !havedisk2)
+    panic("iderw: ide disk 2 not present");
 
   acquire(&idelock);  //DOC:acquire-lock
+
+  if(b->dev == 2) {
+    idestart(b);
+    ideintr2(b);
+    release(&idelock);
+    return;
+  }
+
 
   // Append b to idequeue.
   b->qnext = 0;
