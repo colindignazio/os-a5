@@ -14,7 +14,6 @@
 #include "buf.h"
 
 #define SECTOR_SIZE   512
-#define PAGE_SIZE     4096
 #define IDE_BSY       0x80
 #define IDE_DRDY      0x40
 #define IDE_DF        0x20
@@ -25,10 +24,6 @@
 #define IDE_CMD_RDMUL 0xc4
 #define IDE_CMD_WRMUL 0xc5
 
-#define FS_IMG 0x1f0
-#define SWAP_IMG 0x170
-#define SWAP_DEV 2
-
 // idequeue points to the buf now being read/written to the disk.
 // idequeue->qnext points to the next buf to be processed.
 // You must hold idelock while manipulating queue.
@@ -36,17 +31,16 @@
 static struct spinlock idelock;
 static struct buf *idequeue;
 
-static int havedisk_fs;
-static int havedisk_swap;
+static int havedisk1;
 static void idestart(struct buf*);
 
 // Wait for IDE disk to become ready.
 static int
-idewait(int checkerr, int disk_addr)
+idewait(int checkerr)
 {
   int r;
 
-  while(((r = inb(disk_addr)) & IDE_BSY))
+  while(((r = inb(0x1f7)) & (IDE_BSY|IDE_DRDY)) != IDE_DRDY)
     ;
   if(checkerr && (r & (IDE_DF|IDE_ERR)) != 0)
     return -1;
@@ -61,23 +55,13 @@ ideinit(void)
   initlock(&idelock, "ide");
   picenable(IRQ_IDE);
   ioapicenable(IRQ_IDE, ncpu - 1);
-  idewait(0, FS_IMG + 7);
+  idewait(0);
 
   // Check if disk 1 is present
   outb(0x1f6, 0xe0 | (1<<4));
   for(i=0; i<1000; i++){
     if(inb(0x1f7) != 0){
-      havedisk_fs = 1;
-      break;
-    }
-  }
-  idewait(0, SWAP_IMG + 7);
-
-  // Check if disk 1 is present
-  outb(SWAP_IMG + 6, 0xe0 | (1<<4));
-  for(i=0; i<1000; i++){
-    if(inb(SWAP_IMG + 7) != 0){
-      havedisk_swap = 1;
+      havedisk1 = 1;
       break;
     }
   }
@@ -101,7 +85,7 @@ idestart(struct buf *b)
 
   if (sector_per_block > 7) panic("idestart");
 
-  idewait(0, FS_IMG + 7);
+  idewait(0);
   outb(0x3f6, 0);  // generate interrupt
   outb(0x1f2, sector_per_block);  // number of sectors
   outb(0x1f3, sector & 0xff);
@@ -113,52 +97,6 @@ idestart(struct buf *b)
     outsl(0x1f0, b->data, BSIZE/4);
   } else {
     outb(0x1f7, read_cmd);
-  }
-}
-
-void
-read_page_from_swap(char *a, int sector) {
-  int i;
-  char * buffer = a;
-  int read_cmd = (PAGE_SIZE/SECTOR_SIZE == 1) ? IDE_CMD_READ :  IDE_CMD_RDMUL;
-
-  idewait(0, SWAP_IMG + 7);
-  outb(0x376, 0); // generate interrupt
-  outb(SWAP_IMG + 2, PAGE_SIZE/SECTOR_SIZE);  // number of sectors
-  outb(SWAP_IMG + 3, sector & 0xff);
-  outb(SWAP_IMG + 4, (sector >> 8) & 0xff);
-  outb(SWAP_IMG + 5, (sector >> 16) & 0xff);
-  outb(SWAP_IMG + 6, 0xe0 | ((SWAP_DEV&1)<<4) | ((sector>>24)&0xf));
-  outb(SWAP_IMG + 7, read_cmd);
-
-  for(i = 0; i < PAGE_SIZE/SECTOR_SIZE; i++){
-    if(idewait(SWAP_IMG + 7, 1) == 0) {
-      insl(SWAP_IMG, buffer, BSIZE/4);
-      buffer += SECTOR_SIZE;
-    }
-  }
-}
-
-void
-write_page_to_swap(char *a, int sector) {
-  int i;
-  char * buffer = a;
-  int write_cmd = (PAGE_SIZE/SECTOR_SIZE == 1) ? IDE_CMD_WRITE : IDE_CMD_WRMUL;
-
-  idewait(0, SWAP_IMG + 7);
-  outb(0x376, 0); // generate interrupt
-  outb(SWAP_IMG + 2, PAGE_SIZE/SECTOR_SIZE);  // number of sectors
-  outb(SWAP_IMG + 3, sector & 0xff);
-  outb(SWAP_IMG + 4, (sector >> 8) & 0xff);
-  outb(SWAP_IMG + 5, (sector >> 16) & 0xff);
-  outb(SWAP_IMG + 6, 0xe0 | ((SWAP_DEV&1)<<4) | ((sector>>24)&0xf));
-  outb(SWAP_IMG + 7, write_cmd);
-
-  for(i = 0; i < PAGE_SIZE/SECTOR_SIZE; i++){
-    if(idewait(SWAP_IMG + 7, 1) == 0) {
-      outsl(SWAP_IMG, buffer, BSIZE/4);
-      buffer += SECTOR_SIZE;
-    }
   }
 }
 
@@ -178,7 +116,7 @@ ideintr(void)
   idequeue = b->qnext;
 
   // Read data if needed.
-  if(!(b->flags & B_DIRTY) && idewait(1, FS_IMG + 7) >= 0)
+  if(!(b->flags & B_DIRTY) && idewait(1) >= 0)
     insl(0x1f0, b->data, BSIZE/4);
 
   // Wake process waiting for this buf.
@@ -206,7 +144,7 @@ iderw(struct buf *b)
     panic("iderw: buf not locked");
   if((b->flags & (B_VALID|B_DIRTY)) == B_VALID)
     panic("iderw: nothing to do");
-  if(b->dev != 0 && !havedisk_fs)
+  if(b->dev != 0 && !havedisk1)
     panic("iderw: ide disk 1 not present");
 
   acquire(&idelock);  //DOC:acquire-lock
