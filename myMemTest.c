@@ -27,7 +27,6 @@ int main(int argc, char *argv[]) {
   // being chosen for NFU
   for(i = 3; i < MAX_PSYC_PAGES; i++) {
     pages[i] = sbrk(PGSIZE);
-    memset(pages[i], '*', PGSIZE);
     printf(1, "pages[%d] = %x\n", i, pages[i]);
   }
 

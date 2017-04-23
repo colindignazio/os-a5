@@ -486,7 +486,6 @@ writei(struct inode *ip, char *src, uint off, uint n)
     m = min(n - tot, BSIZE - off%BSIZE);
     memmove(bp->data + off%BSIZE, src, m);
 
-    // We should probably be using the log here
     if(bp->dev == 2) {
       bwrite(bp);
     } else {

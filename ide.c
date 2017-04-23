@@ -162,7 +162,7 @@ ideintr(void)
 }
 
 // For whatever reason the interupt wouldn't work with the swap disk
-// Might have something to do with logging. Crudely calling it directly for now.
+// Calling it manually here so that the reads and bits get set properly
 void
 ideintr2(struct buf *b)
 {
